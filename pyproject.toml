@@ -1,0 +1,26 @@
+[project]
+name = "esriscraper"
+version = "0.0.1"
+authors = [
+  { name="ramSeraph" },
+]
+description = "Tools to scrape/analyze an ESRI services endpoint"
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: The Unlicense (Unlicense)",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "esridump @ git+https://github.com/ramSeraph/pyesridump.git@master",
+    "requests"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/ramSeraph/esriscraper"
+"Bug Tracker" = "https://github.com/ramSeraph/esriscraper/issues"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
