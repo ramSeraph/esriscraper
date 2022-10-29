@@ -9,8 +9,11 @@ from esridump.errors import EsriDownloadError
 
 logger = logging.getLogger(__name__)
 
-def get_info(url):
-    resp = requests.get(url, params={'f': 'json'})
+def get_info(url, extra_query_args):
+    logger.info(f'getting info for {url}')
+    params = {'f': 'json'}
+    params.update(extra_query_args)
+    resp = requests.get(url, params=params)
     if not resp.ok:
         raise Exception(f'Unable to query {url}')
     
@@ -19,6 +22,7 @@ def get_info(url):
 
 
 def get_all_info(main_url, base_params, analysis_folder,
+                 blacklist={},
                  interested_server_types=['MapServer', 'FeatureServer']):
     full_folder_map = { '' : False }
     full_services_map = {}
@@ -31,6 +35,7 @@ def get_all_info(main_url, base_params, analysis_folder,
                 line = line.strip('\n')
                 full_services_map[line] = True
  
+    extra_query_args = base_params.get('extra_query_args', {})
     while True:
         folder_map = copy.deepcopy(full_folder_map)
         for folder, val in folder_map.items():
@@ -38,7 +43,7 @@ def get_all_info(main_url, base_params, analysis_folder,
                 continue
             url = main_url + '/' + folder
             logger.info(f'querying {folder}')
-            info = get_info(url)
+            info = get_info(url, extra_query_args)
             logger.debug(f'info={pformat(info)}')
             full_folder_map[folder] = True
             if info.get('error', None) != None:
@@ -52,8 +57,11 @@ def get_all_info(main_url, base_params, analysis_folder,
                 s_name = s['name']
                 s_type = s['type']
                 if s['type'] in interested_server_types:
-                    if s_name not in full_services_map:
-                        full_services_map[f'{s_name}/{s_type}'] = False
+                    s_full_name = f'{s_name}/{s_type}'
+                    if s_full_name in blacklist and blacklist[s_full_name] is None:
+                        continue
+                    if s_full_name not in full_services_map:
+                        full_services_map[s_full_name] = False
         if all([v != False for v in full_folder_map.values()]):
             break
 
@@ -69,7 +77,7 @@ def get_all_info(main_url, base_params, analysis_folder,
                 all_layer_list.append(e)
                 all_layer_map = {(e['name'], e['id']):e for e in all_layer_list}
            
-
+    full_services_map_file.parent.mkdir(exist_ok=True, parents=True)
     with open(full_services_map_file, 'w') as sfp:
         with open(all_layer_list_file, 'a') as f:
             for service, val in full_services_map.items():
@@ -78,7 +86,7 @@ def get_all_info(main_url, base_params, analysis_folder,
                     sfp.flush()
                     continue
                 url = f'{main_url}/{service}'
-                info = get_info(url)
+                info = get_info(url, extra_query_args)
                 all_layers = info.get('layers', [])
                 full_services_map[service] = True
 
@@ -98,6 +106,8 @@ def get_all_info(main_url, base_params, analysis_folder,
                     parts.reverse()
                     return "/".join(parts)
 
+                svc_blacklist = blacklist.get(service, [])
+
                 for layer in all_layers:
                     #logger.info(pformat(layer))
                     layer_id = layer['id']
@@ -105,6 +115,8 @@ def get_all_info(main_url, base_params, analysis_folder,
                     if sub_layers is not None and len(sub_layers) > 0:
                         continue
                     layer_name = get_full_layer_name(layer)
+                    if f'{layer_name}_{layer_id}' in svc_blacklist:
+                        continue
                     full_name = f'{service}/{layer_name}'
                     if (full_name, layer_id) in all_layer_map:
                         continue

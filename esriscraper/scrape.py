@@ -133,6 +133,8 @@ def scrape_map_servers(**kwargs):
         svc_url = f'{base_url}/{svc}'
         svc_whitelist = info.get('whitelist', None)
         svc_blacklist = blacklist.get(svc, [])
+        if svc_blacklist is None:
+            continue
         server_params = info.get('params', {})
         params = {}
         params.update(base_params)
