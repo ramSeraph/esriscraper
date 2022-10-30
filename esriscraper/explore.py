@@ -23,6 +23,7 @@ def get_info(url, extra_query_args):
 
 def get_all_info(main_url, base_params, analysis_folder,
                  blacklist={},
+                 folder_blacklist=[],
                  interested_server_types=['MapServer', 'FeatureServer']):
     full_folder_map = { '' : False }
     full_services_map = {}
@@ -52,6 +53,10 @@ def get_all_info(main_url, base_params, analysis_folder,
             new_services = info['services']
             new_folders = [ folder + '/' + f for f in new_folders ]
             for f in new_folders:
+                if f.startswith('/'):
+                    f = f[1:]
+                if f in folder_blacklist:
+                    continue
                 full_folder_map[f] = False
             for s in new_services:
                 s_name = s['name']
@@ -99,7 +104,7 @@ def get_all_info(main_url, base_params, analysis_folder,
                     curr = layer
                     while True:
                         parts.append(curr['name'])
-                        parent_id = curr['parentLayerId']
+                        parent_id = curr.get('parentLayerId', -1)
                         if parent_id == -1:
                             break
                         curr = layer_map[parent_id]
@@ -109,9 +114,8 @@ def get_all_info(main_url, base_params, analysis_folder,
                 svc_blacklist = blacklist.get(service, [])
 
                 for layer in all_layers:
-                    #logger.info(pformat(layer))
                     layer_id = layer['id']
-                    sub_layers = layer['subLayerIds']
+                    sub_layers = layer.get('subLayerIds')
                     if sub_layers is not None and len(sub_layers) > 0:
                         continue
                     layer_name = get_full_layer_name(layer)
