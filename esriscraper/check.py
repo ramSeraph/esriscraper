@@ -6,9 +6,10 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-def already_done():
+def already_done(data_folder):
     done_layers = []
-    files = Path('data').glob('**/*.geojsonl.status')
+    data_folder_name = str(data_folder)
+    files = data_folder.glob('**/*.geojsonl.status')
     for file in files:
         status = file.read_text()
         if status in [ 'not_layer', 'raster_layer', 'wip' ]:
@@ -17,7 +18,7 @@ def already_done():
             logger.error(file, status)
             raise Exception('unexpected')
         fname = str(file)
-        fname = fname.replace('data/', '')
+        fname = fname.replace(data_folder_name + '/', '')
         m = re.match(r'(.*)_([0-9]+)\.geojsonl\.status', fname)
         if m is None:
             raise Exception('unexpected {fname=}')
@@ -114,13 +115,13 @@ def read_all_layer_info(analysis_folder):
     return all_layer_list, all_layer_map
  
 
-def run_checks(analysis_folder, match_ignore={}, known_matches={}):
+def run_checks(data_folder, analysis_folder, match_ignore={}, known_matches={}):
 
     logger.info('getting all layers')
     full_list, full_list_map = read_all_layer_info(analysis_folder)
     
     logger.info('getting done layer list')
-    done_layers = already_done()
+    done_layers = already_done(data_folder)
     
     logger.info('expanding done layer list')
     done_layers_expanded = expand_layers(done_layers)

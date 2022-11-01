@@ -19,8 +19,8 @@ def scrape_endpoint(data_folder, url,
                     post_processing_func_args={},
                     ignore_layer_types=['Raster Layer']):
     logger.info(f'handling mapserver {url}')
-    server_folder = data_folder / Path(svc)
-    layers_list_file = server_folder / 'layers_list.json'
+    svc_folder = data_folder / Path(svc)
+    layers_list_file = svc_folder / 'layers_list.json'
     if layers_list_file.exists():
         with open(layers_list_file, 'r') as f:
             all_layers = json.load(f)
@@ -33,7 +33,7 @@ def scrape_endpoint(data_folder, url,
         logger.debug(f'metadata={pformat(metadata)}')
 
         all_layers = metadata.get('layers', [])
-        server_folder.mkdir(parents=True, exist_ok=True)
+        svc_folder.mkdir(parents=True, exist_ok=True)
         with open(layers_list_file, 'w') as f:
             json.dump(all_layers, f)
 
@@ -63,7 +63,7 @@ def scrape_endpoint(data_folder, url,
         if whitelist is not None and layer_name not in whitelist:
             continue
 
-        layer_file = server_folder / f'{layer_name}.geojsonl'
+        layer_file = svc_folder / f'{layer_name}.geojsonl'
         logger.info(f'handling {layer_name}:{layer_id}')
 
         Path(layer_file).parent.mkdir(parents=True, exist_ok=True)
@@ -96,7 +96,6 @@ def scrape_endpoint(data_folder, url,
             layer_file_status.write_text('ignore')
             continue
 
-        saved = []
         prev_state = None
         layer_file_state = Path(str(layer_file) + '.state') 
         if layer_file_state.exists():
