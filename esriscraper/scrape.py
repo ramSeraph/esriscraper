@@ -72,7 +72,7 @@ def scrape_endpoint(data_folder, url,
         if not layer_file_status.exists():
             layer_file_status.write_text('wip')
         else:
-            completed = post_processing_func(layer_file, layer_file_status, **post_processing_func_args)
+            completed = post_processing_func(data_folder, layer_file, layer_file_status, **post_processing_func_args)
             if completed:
                 continue
             
@@ -121,7 +121,7 @@ def scrape_endpoint(data_folder, url,
 
         layer_file_status.write_text('downloaded')
         if post_processing_func is not None:
-            post_processing_func(layer_file, layer_file_status, **post_processing_func_args)
+            post_processing_func(data_folder, layer_file, layer_file_status, **post_processing_func_args)
                 
 
 

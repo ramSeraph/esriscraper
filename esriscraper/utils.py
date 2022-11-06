@@ -25,9 +25,9 @@ def compress_file(file, sfile):
     sfile.write_text('compressed')
 
 
-def transfer_file(file, sfile, bucket_name):
+def transfer_file(data_folder_name, file, sfile, bucket_name):
     cfile = Path(str(file) + '.7z')
-    suffix = str(cfile).removeprefix('data/')
+    suffix = str(cfile).removeprefix(f'{data_folder_name}/')
     if cfile.exists():
         to = f'gs://{bucket_name}/{suffix}'
         run_external(f'gsutil -m cp "{cfile}" "{to}"')
@@ -35,7 +35,7 @@ def transfer_file(file, sfile, bucket_name):
     sfile.write_text('done')
 
 
-def compress_and_push_to_gcs(layer_file, layer_file_status, bucket_name=None):
+def compress_and_push_to_gcs(data_folder, layer_file, layer_file_status, bucket_name=None):
     if bucket_name is None:
         raise Exception('bucket name needs to be provided')
 
@@ -44,6 +44,6 @@ def compress_and_push_to_gcs(layer_file, layer_file_status, bucket_name=None):
         compress_file(layer_file, layer_file_status)
     status = layer_file_status.read_text().strip()
     if status == 'compressed':
-        transfer_file(layer_file, layer_file_status, bucket_name)
+        transfer_file(str(data_folder), layer_file, layer_file_status, bucket_name)
     status = layer_file_status.read_text().strip()
     return status in ['done', 'not_layer', 'ignore']
