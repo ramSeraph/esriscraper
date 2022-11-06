@@ -26,9 +26,10 @@ def scrape_endpoint(data_folder, url,
             all_layers = json.load(f)
     else:
         extra_query_args = params.get('extra_query_args', {})
+        extra_headers = params.get('extra_headers', {})
         req_params = {'f': 'json'}
         req_params.update(extra_query_args)
-        resp = requests.get(url, params=req_params)
+        resp = requests.get(url, params=req_params, headers=extra_headers)
         metadata = json.loads(resp.text)
         logger.debug(f'metadata={pformat(metadata)}')
 

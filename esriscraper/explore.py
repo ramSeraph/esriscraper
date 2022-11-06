@@ -9,11 +9,11 @@ from esridump.errors import EsriDownloadError
 
 logger = logging.getLogger(__name__)
 
-def get_info(url, extra_query_args):
+def get_info(url, extra_query_args, extra_headers):
     logger.info(f'getting info for {url}')
     params = {'f': 'json'}
     params.update(extra_query_args)
-    resp = requests.get(url, params=params)
+    resp = requests.get(url, params=params, headers=extra_headers)
     if not resp.ok:
         raise Exception(f'Unable to query {url}')
     
@@ -37,6 +37,7 @@ def get_all_info(main_url, base_params, analysis_folder,
                 full_services_map[line] = True
  
     extra_query_args = base_params.get('extra_query_args', {})
+    extra_headers = base_params.get('extra_headers', {})
     while True:
         folder_map = copy.deepcopy(full_folder_map)
         for folder, val in folder_map.items():
@@ -44,7 +45,7 @@ def get_all_info(main_url, base_params, analysis_folder,
                 continue
             url = main_url + '/' + folder
             logger.info(f'querying {folder}')
-            info = get_info(url, extra_query_args)
+            info = get_info(url, extra_query_args, extra_headers)
             logger.debug(f'info={pformat(info)}')
             full_folder_map[folder] = True
             if info.get('error', None) != None:
@@ -91,7 +92,7 @@ def get_all_info(main_url, base_params, analysis_folder,
                     sfp.flush()
                     continue
                 url = f'{main_url}/{service}'
-                info = get_info(url, extra_query_args)
+                info = get_info(url, extra_query_args, extra_headers)
                 all_layers = info.get('layers', [])
                 full_services_map[service] = True
 
