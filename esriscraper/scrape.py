@@ -126,13 +126,65 @@ def scrape_endpoint(data_folder, url,
                 
 
 
-def scrape_map_servers(**kwargs):
-    data_folder = kwargs.pop('data_folder')
-    base_url = kwargs.pop('base_url')
-    map_svcs = kwargs.pop('to_scrape')
-    blacklist = kwargs.pop('blacklist', {})
-    base_params = kwargs.pop('base_params', {})
-    for svc, info in map_svcs.items():
+def scrape_map_servers(data_folder='data/',
+                       base_url=None,
+                       to_scrape=None,
+                       blacklist={},
+                       base_params={},
+                       **kwargs):
+"""A function to scrape a selection of services/layers 
+specified by to_scrape from a arcgis server specified by base_url
+and save it to the directory specified by data_folder
+
+Parameters
+----------
+    data_folder: str
+      The folder to save data in(default: 'data/')
+    base_url: str
+      The url of the services folder to scrape(Example: https://arc.indiawris.gov.in/server/rest/services)
+    to_scrape: dict
+      The map of services/layers to be scraped.
+      All services not specified in the keys in to_scrape are ignored.
+      The service type( like MapServer ) is part of the name.
+
+      You can further specify which of the service's layers needs to scraped by adding a whitelist entry in the value for that service.
+      Layer names are suffixed with the _<layer_id> to avoid name clashes, 
+      layer_id can be obtained by visiting the parent service folder on the base_url
+      or can be obtained by running the get_all_info() function from explore.py
+
+      A missing whitelist entry means all the layers from the service will be scraped.
+
+      A layer_params_map can be specified to override the params passed to the invocation of scrape_endpoint for a given layer
+
+      Ex: {
+        'Admin/Administrative_NWIC/MapServer': {},
+        'Common/Administrative_WRP/MapServer': {
+            'whitelist': [
+                'State Capitals_0'
+            ],
+            'layer_params_map': {
+                'State Capitals_0': {
+                    'max_page_size': 1
+                }
+            }
+        }
+      }
+      In the above example,  
+    
+    blacklist: dict
+        layers which need to be excluded from scraping 
+        Ex: {
+            'Common/Administrative_NWIC/MapServer': [
+                'Village_6'
+            ]
+        }
+    
+    base_params: dict
+    **kwargs: args to be passed on to scrape_endpoints function
+    
+"""
+
+    for svc, info in to_scrape.items():
         svc_url = f'{base_url}/{svc}'
         svc_whitelist = info.get('whitelist', None)
         svc_blacklist = blacklist.get(svc, [])
@@ -149,8 +201,21 @@ def scrape_map_servers(**kwargs):
                         **kwargs)
     return True
 
+def scrape_map_servers_wrap(delay=5.0,
+                            max_delay=900.0,
+                            **kwargs):
+"""A wrapper around scrape_map_servers to retry on failure with increasing delay.
 
-def scrape_map_servers_wrap(**kwargs):
+Parameters
+----------
+    delay: float
+      The initial delay and also the amount with which the delay increases
+    max_delay: float
+      The most delay allowed between two attempts(default: 300.0)
+    **kwargs: args to be passed on to scrape_map_servers function
+    
+"""
+
     attempt = 0
 
     max_delay = kwargs.pop('max_delay')
