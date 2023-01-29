@@ -6,18 +6,96 @@ from pathlib import Path
 
 import requests
 from esridump.dumper import EsriDumper, DumperState
+from util import mark_as_done
 
 
 logger = logging.getLogger(__name__)
-
 
 def scrape_endpoint(data_folder, url,
                     params, svc,
                     layer_params_map,
                     whitelist, blacklist,
-                    post_processing_func=None,
+                    post_processing_func=mark_as_done,
                     post_processing_func_args={},
                     ignore_layer_types=['Raster Layer']):
+
+    """A function to scrape layers in a service.
+
+    Parameters
+    ----------
+      data_folder: str
+        The folder to save data in.
+
+
+      url: str
+        The url of the service endpoint to scrape.
+
+        Example:
+          https://arc.indiawris.gov.in/server/rest/services/Common/Administrative_NWIC/MapServer
+
+
+      params: dict
+        Settings used while scraping all the layers of this service.
+
+        Look at EsriDumper constructor arguments for possible values.
+
+
+      svc: str
+        Name of the service to scrape, used for creating the data sub folder structure.
+
+
+      layer_params_map: dict
+        A dictionary of layer scraping settings overrides per layer,
+        these override the default settings used to scrape a layer using esridump.
+
+        Look at EsriDumper constructor arguments for possible values.
+
+
+      whitelist: list
+        A dictionary entry whose entries specify which layers of the service should be scraped.
+
+        Layer names are suffixed with the _<layer_id> to avoid name clashes. 
+
+        layer_id can be obtained by visiting the parent service folder web page on the base_url
+        or can be obtained by running the get_all_info() function from explore.py
+        and looking at the data in the all_layer_list.jsonl file.
+
+        If the dictionary is empty, all layers in the service endpoint are pulled.
+
+
+      blacklist: list
+        layers which need to be excluded from scraping.
+
+        Layer names are suffixed with the _<layer_id> to avoid name clashes.
+
+
+      post_processing_func: function
+        After all the data is downloaded/attempted, this function is called.
+
+        It returns false if it was not successful download or an ignore.
+        ( return code is currently unused.. I don't rememeber why I had it in the first place :( )
+
+        It takes the data folder, the layer file, the layer status file as mandatory args
+
+        default: util.mark_as_done
+          This function just sets the state in state file to 'done',
+
+          if the current state in state file is 'downloaded'.
+
+
+      post_processing_func_args: dict
+        Extra args to be used while invoking post_processing_func.
+        default: {}
+
+
+      ignore_layer_types: list
+        Types of layers to ignore for downloading.
+
+        Layer type is obtained from a call to the metadata api of the layer.
+
+        default: [ 'Raster Layer' ]
+    """
+
     logger.info(f'handling mapserver {url}')
     svc_folder = data_folder / Path(svc)
     layers_list_file = svc_folder / 'layers_list.json'
@@ -76,7 +154,7 @@ def scrape_endpoint(data_folder, url,
             completed = post_processing_func(data_folder, layer_file, layer_file_status, **post_processing_func_args)
             if completed:
                 continue
-            
+
         layer_url = f'{url}/{layer_id}'
         logger.info(f'server layer url: {layer_url}')
 
@@ -123,66 +201,117 @@ def scrape_endpoint(data_folder, url,
         layer_file_status.write_text('downloaded')
         if post_processing_func is not None:
             post_processing_func(data_folder, layer_file, layer_file_status, **post_processing_func_args)
-                
+
 
 
 def scrape_map_servers(data_folder='data/',
                        base_url=None,
-                       to_scrape=None,
-                       blacklist={},
                        base_params={},
+                       to_scrape={},
+                       blacklist={},
                        **kwargs):
-"""A function to scrape a selection of services/layers 
-specified by to_scrape from a arcgis server specified by base_url
-and save it to the directory specified by data_folder
 
-Parameters
-----------
-    data_folder: str
-      The folder to save data in(default: 'data/')
-    base_url: str
-      The url of the services folder to scrape(Example: https://arc.indiawris.gov.in/server/rest/services)
-    to_scrape: dict
-      The map of services/layers to be scraped.
-      All services not specified in the keys in to_scrape are ignored.
-      The service type( like MapServer ) is part of the name.
+    """A function to scrape a selection of services/layers 
+    specified by to_scrape from a arcgis server specified by base_url
+    and save it to the directory specified by data_folder
 
-      You can further specify which of the service's layers needs to scraped by adding a whitelist entry in the value for that service.
-      Layer names are suffixed with the _<layer_id> to avoid name clashes, 
-      layer_id can be obtained by visiting the parent service folder on the base_url
-      or can be obtained by running the get_all_info() function from explore.py
+    Parameters
+    ----------
+      data_folder: str
+        The folder to save data in
 
-      A missing whitelist entry means all the layers from the service will be scraped.
+        default: 'data/'
 
-      A layer_params_map can be specified to override the params passed to the invocation of scrape_endpoint for a given layer
 
-      Ex: {
-        'Admin/Administrative_NWIC/MapServer': {},
-        'Common/Administrative_WRP/MapServer': {
-            'whitelist': [
-                'State Capitals_0'
-            ],
-            'layer_params_map': {
-                'State Capitals_0': {
-                    'max_page_size': 1
-                }
-            }
+      base_url: str
+        The url of the esri rest services base url to scrape.
+
+        Example:
+          https://arc.indiawris.gov.in/server/rest/services
+
+
+      base_params: dict
+        Params used while scraping all the services/layers specified in 'to_scrape'.
+
+        Look at EsriDumper onstructor arguments for possible values
+
+
+      to_scrape: dict
+        The map of services/layers to be scraped.
+
+        All services not specified in the keys in to_scrape are ignored.
+        The service type( like MapServer ) is part of the name.
+
+        Each entry for a service key maps 'to_scrape' arg dict can optionally have entries with a 'whitelist' and a 'params' key.
+          If a 'whitelist' entry is missing in the dict provided for a service, all layers in the service are downloaded.
+
+          A 'params' entry is itself a dictionary that for all the layers in this service 
+          overrides the settings supplied for scraping layers with the 'base_params' argument.
+
+          The 'whitelist' entry in the value for a service specifies which layers of the service should be scraped.
+          Layer names are suffixed with the _<layer_id> to avoid name clashes. 
+
+          layer_id can be obtained by visiting the parent service folder web page on the base_url.
+          or can be obtained by running the get_all_info() function from explore.py and looking at the data in the all_layer_list.jsonl.
+
+          A missing 'whitelist' entry means all the layers from the service will be scraped.
+
+          A layer_params_map can be specified to override the params passed to the invocation of scrape_endpoint for a given layer.
+          Look at EsriDumper onstructor arguments for possible values.
+
+        Example: 
+        {
+          'Admin/Administrative_NWIC/MapServer': {
+              'params': {
+                   'max_page_size': 10
+              }
+          },
+          'Common/Administrative_WRP/MapServer': {
+              'whitelist': [
+                  'State Capitals_0'
+              ],
+              'layer_params_map': {
+                  'State Capitals_0': {
+                      'max_page_size': 1
+                  }
+              }
+          }
         }
-      }
-      In the above example,  
-    
-    blacklist: dict
-        layers which need to be excluded from scraping 
-        Ex: {
+        In the above example, everything in the 'Admin/Administrative_NWIC/MapServer' will get scraped and
+        only the 'State Capitals' layer (with layer id 0) will be scraped.
+
+        And while scraping the 'State Capitals' layer the 'max_page_size' param will be overriden to 1.
+
+        And for layers under 'Admin/Administrative_NWIC/MapServer' the 'max_page_size' param of 10 is used while scraping them.
+
+
+      blacklist: dict
+        Layers which need to be excluded from scraping.
+
+        It is a dict keyed with the service name with list of layers in the service as values.
+        The service type( like MapServer ) is part of the name.
+
+        Layer names are suffixed with the _<layer_id> to avoid name clashes. 
+        layer_id can be obtained by visiting the parent service folder web page on the base_url.
+        or can be obtained by running the get_all_info() function from explore.py and looking at the data in the all_layer_list.jsonl.
+
+
+        Example:
+        {
             'Common/Administrative_NWIC/MapServer': [
                 'Village_6'
-            ]
+            ],
+            'Common/Administrative_NWIC_other/MapServer': None
         }
-    
-    base_params: dict
-    **kwargs: args to be passed on to scrape_endpoints function
-    
-"""
+
+        In the above example 'Village_6' layer of 'Common/Administrative_NWIC/MapServer' will not be scraped,
+        and all of layers of 'Common/Administrative_NWIC_other/MapServer' will not be scraped
+
+
+      **kwargs: 
+        Extra args to be passed on to scrape_endpoint function.
+
+    """
 
     for svc, info in to_scrape.items():
         svc_url = f'{base_url}/{svc}'
@@ -201,20 +330,29 @@ Parameters
                         **kwargs)
     return True
 
+
 def scrape_map_servers_wrap(delay=5.0,
                             max_delay=900.0,
                             **kwargs):
-"""A wrapper around scrape_map_servers to retry on failure with increasing delay.
+    """A wrapper around scrape_map_servers to retry on failure with increasing delay.
 
-Parameters
-----------
-    delay: float
-      The initial delay and also the amount with which the delay increases
-    max_delay: float
-      The most delay allowed between two attempts(default: 300.0)
-    **kwargs: args to be passed on to scrape_map_servers function
-    
-"""
+    Parameters
+    ----------
+      delay: float
+        The initial delay in seconds and also the amount with which the delay increases.
+
+        default: 5.0
+
+
+      max_delay: float
+        The most delay allowed between two attempts.
+
+        default: 300.0
+
+
+      **kwargs:
+        args to be passed on to scrape_map_servers function.
+    """
 
     attempt = 0
 

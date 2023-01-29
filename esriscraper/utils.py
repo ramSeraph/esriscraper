@@ -35,6 +35,16 @@ def transfer_file(data_folder_name, file, sfile, bucket_name):
     sfile.write_text('done')
 
 
+success_states = ['done', 'not_layer', 'ignore']
+
+def mark_as_done(data_folder, layer_file, layer_file_status):
+    status = layer_file_status.read_text().strip()
+    if status == 'downloaded':
+        status = 'done'
+        layer_file_status.write_text(status)
+    return status in success_states
+
+
 def compress_and_push_to_gcs(data_folder, layer_file, layer_file_status, bucket_name=None):
     if bucket_name is None:
         raise Exception('bucket name needs to be provided')
@@ -46,4 +56,4 @@ def compress_and_push_to_gcs(data_folder, layer_file, layer_file_status, bucket_
     if status == 'compressed':
         transfer_file(str(data_folder), layer_file, layer_file_status, bucket_name)
     status = layer_file_status.read_text().strip()
-    return status in ['done', 'not_layer', 'ignore']
+    return status in success_states

@@ -25,6 +25,66 @@ def get_all_info(main_url, base_params, analysis_folder,
                  blacklist={},
                  folder_blacklist=[],
                  interested_server_types=['MapServer', 'FeatureServer']):
+    """
+    Dump information of all the available layers at service endpoint into 
+    a line delimited json file.
+
+    Parameters:
+    ----------
+      main_url: str
+        The url of the esri rest services base url to scrape.
+
+        Example:
+          https://arc.indiawris.gov.in/server/rest/services
+
+
+      base_params: dict
+        Params used while scraping the metadata of services/layers
+
+        Look at EsriDumper onstructor arguments for possible values
+
+      blacklist: dict
+        Layers which need to be excluded from exploring.
+        This is mostly done to avoid service/layers which break the tool
+
+        Example:
+        {
+            'Common/Administrative_NWIC/MapServer': [
+                'Village_6'
+            ]
+        }
+
+        It is a dict keyed with the service name with list of layers in the service as values.
+        The service type( like MapServer ) is part of the name.
+
+        Layer names are suffixed with the _<layer_id> to avoid name clashes. 
+        layer_id can be obtained by visiting the parent service folder web page on the base_url.
+
+
+        Example:
+        {
+            'Common/Administrative_NWIC/MapServer': [
+                'Village_6'
+            ],
+            'Common/Administrative_NWIC_other/MapServer': None
+        }
+
+        In the above example 'Village_6' layer of 'Common/Administrative_NWIC/MapServer' will not be scraped,
+        and all of layers of 'Common/Administrative_NWIC_other/MapServer' will not be explored
+
+
+      folder_blacklist: list
+        Folders( logical grouping of services ) which need to be ignored for exploring.
+        This is usually done to ignore folders that break the tool
+
+        Example:
+        [
+            "bharatmaps",
+            "panchayat",
+            "svamitva",
+            "Utilities"
+        ]
+    """
     full_folder_map = { '' : False }
     full_services_map = {}
 

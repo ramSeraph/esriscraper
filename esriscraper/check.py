@@ -87,7 +87,6 @@ def get_possible_matches(done_layers, done_layers_expanded, full_list_map, full_
 
 
 def prune_missing(full_missing, matched_set, known_matches):
-    known_matches_file = Path('known_matches.json')
     known_matches = {}
     if known_matches_file.exists():
         known_matches = json.loads(known_matches_file.read_text())
@@ -116,6 +115,71 @@ def read_all_layer_info(analysis_folder):
  
 
 def run_checks(data_folder, analysis_folder, match_ignore={}, known_matches={}):
+
+    """
+    Function to check if there are duplicates in the layers already downloaded
+    and the layers still undownloaded as known from the master list obtained
+    from running explore on the service endpoint( located at analysis_folder/all_layer_list.jsonl ).
+
+    Two output file get written:
+      analysis_folder/matches.json
+        file containing the matches found in the undownloaded layers from the already downloaded data.
+        data is keyed with the downloaded layer names.
+
+      analysis_folder/need_to_check.json
+        file containing the undownloaded layers which didn't match any of the downloaded layers
+
+    This is in no way foolproof. 
+    It checks if the names after removing the endpoint point types( MapServer, FeatureServer etc ) 
+    have suffix matches and when there are suffix matches if the feature counts match too.. 
+    In case of a siffix and feature count match it considers it a duplicate
+
+    Parameters
+    ----------
+        data_folder: pathlib.Path
+          folder where scrape functionality has downlaoded the data to
+
+        analysis_folder: pathlib.Path
+          folder where explore functionality has downlaoded the layer list to
+
+        match_ignore: dict
+          Layers to ignore whicle searching for matches.
+
+          The keys in the dict are service names,
+          the service type( like MapServer ) is part of the name.
+
+          The values are either lists of layers to ignore for checking.
+          or None, which means all the layers in the service are ignored for checking.
+
+          Layer names are suffixed with the _<layer_id> to avoid name clashes. 
+          layer_id can be obtained by visiting the parent service folder web page on the base_url
+          or can be obtained by running the get_all_info() function from explore.py and looking at the data in the all_layer_list.jsonl.
+
+
+          Example:
+          {
+              "G2G_SOI/G2G_PlanningTool/MapServer": None,
+              "SOI/G2C_Portal_BaseMap/MapServer": [
+                  "50K_Data/50k_Point_1/New Group Layer_163"
+              ]
+          ]
+
+          In the above example all layers in "G2G_SOI/G2G_PlanningTool/MapServer" are ignored for checking for matches and
+          the layer "50K_Data/50k_Point_1/New Group Layer_163" of "SOI/G2C_Portal_BaseMap/MapServer"
+          is ignored while checking for matches.
+
+        known_matches: dict
+          A map of which layer is already known to be covered by another downloaded layer or a set of downloaded layers
+
+          Example:
+          {   
+              "SOI/SOI_Public_Portal/MapServer/Public Portal/50K_Data/50K_Poly1/tracks_248": "G2G_Basemap_Portal/G2G_Basemap_Portal/MapServer/50K_Data/50K_Poly1/tracks_1_309",
+              "SOI/SOI_Public_Portal/MapServer/Public Portal/DSSDI_Data/RoadCenterLine_156": [
+                  "G2G_Basemap_Portal/G2G_Basemap_Portal/MapServer/DSSDI_Data/RoadCenterLine_148",
+                  "G2G_Basemap_Portal/G2G_Basemap_Portal/MapServer/DSSDI_Data/RoadCenterLine_1_149"
+              ]
+          }
+    """
 
     logger.info('getting all layers')
     full_list, full_list_map = read_all_layer_info(analysis_folder)
