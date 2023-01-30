@@ -295,6 +295,7 @@ def scrape_map_servers(data_folder='data/',
         layer_id can be obtained by visiting the parent service folder web page on the base_url.
         or can be obtained by running the get_all_info() function from explore.py and looking at the data in the all_layer_list.jsonl.
 
+        if a value for a service in the dictionary is None, the whole service is blacklisted
 
         Example:
         {

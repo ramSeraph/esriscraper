@@ -47,18 +47,20 @@ def get_all_info(main_url, base_params, analysis_folder,
         Layers which need to be excluded from exploring.
         This is mostly done to avoid service/layers which break the tool
 
+        It is passed as dict with keys mapped with service names and values as the list of layers
+        The service type( like MapServer ) is part of the name.
+
+        Layer names are suffixed with the _<layer_id> to avoid name clashes. 
+        layer_id can be obtained by visiting the parent service folder web page on the base_url.
+
+        If the value provided for a service is None, then all the layers in the service are ignored
+
         Example:
         {
             'Common/Administrative_NWIC/MapServer': [
                 'Village_6'
             ]
         }
-
-        It is a dict keyed with the service name with list of layers in the service as values.
-        The service type( like MapServer ) is part of the name.
-
-        Layer names are suffixed with the _<layer_id> to avoid name clashes. 
-        layer_id can be obtained by visiting the parent service folder web page on the base_url.
 
 
         Example:
@@ -151,6 +153,10 @@ def get_all_info(main_url, base_params, analysis_folder,
                     sfp.write(f'{service}\n')
                     sfp.flush()
                     continue
+                svc_blacklist = blacklist.get(service, [])
+                if svc_blacklist is None:
+                    continue
+
                 url = f'{main_url}/{service}'
                 info = get_info(url, extra_query_args, extra_headers)
                 all_layers = info.get('layers', [])
@@ -172,7 +178,6 @@ def get_all_info(main_url, base_params, analysis_folder,
                     parts.reverse()
                     return "/".join(parts)
 
-                svc_blacklist = blacklist.get(service, [])
 
                 for layer in all_layers:
                     layer_id = layer['id']
