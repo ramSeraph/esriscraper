@@ -9,16 +9,14 @@ from esridump.errors import EsriDownloadError
 
 logger = logging.getLogger(__name__)
 
-def get_info(url, extra_query_args, extra_headers):
+def get_info(sub_url, dumper):
+    url = dumper._build_url(sub_url)
     logger.info(f'getting info for {url}')
-    params = {'f': 'json'}
-    params.update(extra_query_args)
-    resp = requests.get(url, params=params, headers=extra_headers)
-    if not resp.ok:
-        raise Exception(f'Unable to query {url}')
-    
-    out = json.loads(resp.text)
-    return out
+    query_args = dumper._build_query_args({ 'f': 'json' })
+    headers = dumper._build_headers()
+    response = dumper._request('GET', url, params=query_args, headers=headers)
+    info = dumper._handle_esri_errors(response, "Could not retrieve info")
+    return info
 
 
 def get_all_info(main_url, base_params, analysis_folder,
@@ -87,6 +85,7 @@ def get_all_info(main_url, base_params, analysis_folder,
             "Utilities"
         ]
     """
+    meta_dumper = EsriDumper(main_url, **base_params)
     full_folder_map = { '' : False }
     full_services_map = {}
 
@@ -98,16 +97,13 @@ def get_all_info(main_url, base_params, analysis_folder,
                 line = line.strip('\n')
                 full_services_map[line] = True
  
-    extra_query_args = base_params.get('extra_query_args', {})
-    extra_headers = base_params.get('extra_headers', {})
     while True:
         folder_map = copy.deepcopy(full_folder_map)
         for folder, val in folder_map.items():
             if val:
                 continue
-            url = main_url + '/' + folder
             logger.info(f'querying {folder}')
-            info = get_info(url, extra_query_args, extra_headers)
+            info = get_info(f'/{folder}', meta_dumper)
             logger.debug(f'info={pformat(info)}')
             full_folder_map[folder] = True
             if info.get('error', None) != None:
@@ -158,7 +154,7 @@ def get_all_info(main_url, base_params, analysis_folder,
                     continue
 
                 url = f'{main_url}/{service}'
-                info = get_info(url, extra_query_args, extra_headers)
+                info = get_info(f'/{service}', meta_dumper)
                 all_layers = info.get('layers', [])
                 full_services_map[service] = True
 
