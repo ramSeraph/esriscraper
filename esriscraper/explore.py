@@ -3,7 +3,6 @@ import copy
 import logging
 from pprint import pformat
 
-import requests
 from esridump.dumper import EsriDumper
 from esridump.errors import EsriDownloadError
 

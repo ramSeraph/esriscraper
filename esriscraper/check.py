@@ -2,7 +2,6 @@ import json
 import re
 import copy
 import logging
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -87,9 +86,6 @@ def get_possible_matches(done_layers, done_layers_expanded, full_list_map, full_
 
 
 def prune_missing(full_missing, matched_set, known_matches):
-    known_matches = {}
-    if known_matches_file.exists():
-        known_matches = json.loads(known_matches_file.read_text())
     missing = []
     for e in full_missing:
         if e['name'].lower() in matched_set:
