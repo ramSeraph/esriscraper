@@ -103,12 +103,16 @@ def scrape_endpoint(data_folder, url,
         with open(layers_list_file, 'r') as f:
             all_layers = json.load(f)
     else:
-        extra_query_args = params.get('extra_query_args', {})
-        extra_headers = params.get('extra_headers', {})
-        req_params = {'f': 'json'}
-        req_params.update(extra_query_args)
-        resp = requests.get(url, params=req_params, headers=extra_headers)
-        metadata = json.loads(resp.text)
+        list_layer_params = {}
+        list_layer_params.update(params)
+        list_dumper = EsriDumper(url, **list_layer_params)
+        list_query_args = list_dumper._build_query_args({
+            'f': 'json',
+        })
+        list_headers = list_dumper._build_headers()
+        list_url = list_dumper._build_url()
+        response = list_dumper._request('GET', list_url, params=list_query_args, headers=list_headers)
+        metadata = list_dumper._handle_esri_errors(response, "Could not retrieve layer metadata")
         logger.debug(f'metadata={pformat(metadata)}')
 
         all_layers = metadata.get('layers', [])
