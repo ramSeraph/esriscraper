@@ -38,7 +38,7 @@ def get_all_info(main_url, base_params, analysis_folder,
       base_params: dict
         Params used while scraping the metadata of services/layers
 
-        Look at EsriDumper onstructor arguments for possible values
+        Look at EsriDumper constructor arguments for possible values
 
       blacklist: dict
         Layers which need to be excluded from exploring.
