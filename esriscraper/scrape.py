@@ -6,7 +6,7 @@ from pathlib import Path
 
 import requests
 from esridump.dumper import EsriDumper, DumperState
-from util import mark_as_done
+from .utils import mark_as_done
 
 
 logger = logging.getLogger(__name__)
@@ -357,8 +357,6 @@ def scrape_map_servers_wrap(delay=5.0,
 
     attempt = 0
 
-    max_delay = kwargs.pop('max_delay')
-    delay = kwargs.pop('delay')
     while True:
         to_delay = delay * attempt
         if to_delay > max_delay:
