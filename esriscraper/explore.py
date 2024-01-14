@@ -11,10 +11,9 @@ logger = logging.getLogger(__name__)
 def get_info(sub_url, dumper):
     url = dumper._build_url(sub_url)
     logger.info(f'getting info for {url}')
-    query_args = dumper._build_query_args({ 'f': 'json' })
+    query_args = dumper._build_query_args({ 'f': dumper._json_arg })
     headers = dumper._build_headers()
-    response = dumper._request('GET', url, params=query_args, headers=headers)
-    info = dumper._handle_esri_errors(response, "Could not retrieve info")
+    info = dumper._request('GET', url, "Could not retrieve info", params=query_args, headers=headers)
     return info
 
 
