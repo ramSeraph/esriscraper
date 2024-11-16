@@ -17,7 +17,8 @@ def scrape_endpoint(data_folder, url,
                     whitelist, blacklist,
                     post_processing_func=mark_as_done,
                     post_processing_func_args={},
-                    ignore_layer_types=['Raster Layer']):
+                    ignore_layer_types=['Raster Layer'],
+                    flush_at_batch_end=False):
 
     """A function to scrape layers in a service.
 
@@ -94,6 +95,11 @@ def scrape_endpoint(data_folder, url,
         Layer type is obtained from a call to the metadata api of the layer.
 
         default: [ 'Raster Layer' ]
+      
+      flush_at_batch_end: boolean
+        Whether or not to flush at the end of every batch of features retrieved 
+
+        default: False
     """
 
     logger.info(f'handling mapserver {url}')
@@ -194,6 +200,8 @@ def scrape_endpoint(data_folder, url,
                 for feature in feature_iter:
                     line = json.dumps(feature, ensure_ascii=False) + '\n'
                     f.write(line)
+                if flush_at_batch_end:
+                    f.flush()
             except:
                 logger.info('saving state file')
                 layer_file_state.parent.mkdir(exist_ok=True, parents=True)
